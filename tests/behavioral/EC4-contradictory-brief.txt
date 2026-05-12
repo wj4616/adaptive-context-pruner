@@ -1,0 +1,1 @@
+Create a context pruner that must be synchronous (blocking, no async operations) but must also support async operations for long-running compression tasks. The pruner should prune older turns and also never prune any turns older than 10 messages. Additionally, enable_semantic_clustering must be true and enable_semantic_clustering must be false.

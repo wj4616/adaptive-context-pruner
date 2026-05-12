@@ -1,0 +1,2 @@
+Prune this conversation: it has 20 turns about debugging a Python function.
+mode: manual

@@ -1,0 +1,1382 @@
+{
+  "metadata": {
+    "skill_name": "adaptive-context-pruner",
+    "version": "2.0.0",
+    "determinism_class": "non-deterministic",
+    "total_nodes": 20,
+    "total_edges": 39,
+    "back_edges": 2,
+    "total_waves": 9,
+    "topology": "full GoT + wave-modular + conditional-path",
+    "spawn_node_count": 3,
+    "max_concurrent_spawns_per_run": 3,
+    "produced_skill_edge_cap_normal": 100,
+    "produced_skill_edge_cap_aggressive": 120,
+    "produced_skill_edge_cap_complex": 150,
+    "sinks": [
+      "REFUSE_OUTPUT",
+      "NO-OP-TERMINAL",
+      "SKILL_OUTPUT"
+    ],
+    "evolution_mode": "evolve",
+    "evolved_from_version": "1.0.0",
+    "hc23_parallel_dispatch_waves": [
+      "W2",
+      "W3"
+    ],
+    "intra_wave_sequential": []
+  },
+  "nodes": [
+    {
+      "id": "N-INGEST",
+      "type": "INGEST",
+      "exec_type": "inline",
+      "hat": "extractor",
+      "tier": "model-medium",
+      "wave": 1,
+      "context_budget_lines": 50,
+      "scale_gates": {
+        "token_budget": 2000,
+        "time_budget": 120,
+        "spawn_budget": 0,
+        "retry_budget": 1
+      },
+      "input_dependencies": [],
+      "required_output_sections": [
+        "ingest_record"
+      ],
+      "raises_signals": [
+        "ingest_record"
+      ],
+      "ai_advantages_exploited": [
+        "full_corpus_retention",
+        "consistency_at_scale"
+      ],
+      "super_human_unlocks": [
+        "Normalize dual-path input (manual conversation_history vs auto turn_delta) into unified ingest_record schema regardless of invocation mode"
+      ],
+      "halt_conditions": [
+        "halt-on-missing-required-input-fields"
+      ],
+      "context_source": "upgraded",
+      "context_rationale": "v2 auto-mode dual-path input normalization mandated by P1 brief [DUAL-INVOCATION-MODE]",
+      "parallel_dispatch_required": false
+    },
+    {
+      "id": "N-PREFLIGHT",
+      "type": "PREFLIGHT",
+      "exec_type": "inline",
+      "hat": "gate",
+      "tier": "model-small",
+      "wave": 1,
+      "context_budget_lines": 38,
+      "scale_gates": {
+        "token_budget": 1500,
+        "time_budget": 120,
+        "spawn_budget": 0,
+        "retry_budget": 0
+      },
+      "input_dependencies": [
+        "ingest_record"
+      ],
+      "required_output_sections": [
+        "preflight_pass",
+        "refuse_signal",
+        "session_meta"
+      ],
+      "raises_signals": [
+        "preflight_pass",
+        "refuse_signal",
+        "session_meta"
+      ],
+      "ai_advantages_exploited": [
+        "consistency_at_scale"
+      ],
+      "super_human_unlocks": [
+        "Deterministic structural validation across 6 input classes with dual-mode branch expansion for manual vs auto invocation paths"
+      ],
+      "halt_conditions": [
+        "halt-on-timeout-120s"
+      ],
+      "context_source": "upgraded",
+      "context_rationale": "dual-mode validation branch expansion per P1 brief",
+      "parallel_dispatch_required": false
+    },
+    {
+      "id": "N-TRIGGER-EVAL",
+      "type": "GATE",
+      "exec_type": "inline",
+      "hat": "gate",
+      "tier": "model-small",
+      "wave": 1,
+      "context_budget_lines": 25,
+      "scale_gates": {
+        "token_budget": 1000,
+        "time_budget": 120,
+        "spawn_budget": 0,
+        "retry_budget": 0
+      },
+      "input_dependencies": [
+        "session_meta"
+      ],
+      "required_output_sections": [
+        "trigger_signal",
+        "trigger_noop"
+      ],
+      "raises_signals": [
+        "trigger_signal",
+        "trigger_noop"
+      ],
+      "ai_advantages_exploited": [
+        "consistency_at_scale"
+      ],
+      "super_human_unlocks": [
+        "Evaluate Yellow/Orange/Red token-utilization thresholds and scheduled interval logic in a single pass; emit NO-OP early exit for the common no-prune case"
+      ],
+      "halt_conditions": [
+        "halt-fail-open-if-budget-exceeded"
+      ],
+      "context_source": "new",
+      "context_rationale": "New v2 node; evaluates trigger thresholds for auto-mode routing per P1 brief \u00a75.2",
+      "parallel_dispatch_required": false
+    },
+    {
+      "id": "N-GENERATOR",
+      "type": "GENERATOR",
+      "exec_type": "inline",
+      "hat": "generator",
+      "tier": "model-medium",
+      "wave": 2,
+      "context_budget_lines": 100,
+      "scale_gates": {
+        "token_budget": 4000,
+        "time_budget": 120,
+        "spawn_budget": 0,
+        "retry_budget": 1
+      },
+      "input_dependencies": [
+        "session_meta"
+      ],
+      "required_output_sections": [
+        "graph_structure",
+        "dependency_graph",
+        "critical_path_set"
+      ],
+      "raises_signals": [
+        "graph_structure",
+        "dependency_graph"
+      ],
+      "ai_advantages_exploited": [
+        "topology_aware_reasoning",
+        "full_corpus_retention",
+        "parallel_artifact_processing"
+      ],
+      "super_human_unlocks": [
+        "Build dependency DAG with transitive-ancestor critical-path computation for entire conversation in one pass; absorbs N-CRITICAL-PATH computation (OPT-01/FD-02)"
+      ],
+      "halt_conditions": [
+        "halt-advisory-partial-graph-on-timeout"
+      ],
+      "context_source": "upgraded",
+      "context_rationale": "v2 absorbs N-CRITICAL-PATH computation (OPT-01/FD-02); extended dependency DAG per P1 brief \u00a71.1",
+      "parallel_dispatch_required": true
+    },
+    {
+      "id": "N-CLASSIFIER",
+      "type": "CLASSIFIER",
+      "exec_type": "inline",
+      "hat": "classifier",
+      "tier": "model-medium",
+      "wave": 2,
+      "context_budget_lines": 50,
+      "scale_gates": {
+        "token_budget": 2000,
+        "time_budget": 120,
+        "spawn_budget": 0,
+        "retry_budget": 0
+      },
+      "input_dependencies": [
+        "session_meta"
+      ],
+      "required_output_sections": [
+        "domain_label",
+        "domain_probability",
+        "domain_gate"
+      ],
+      "raises_signals": [
+        "domain_gate"
+      ],
+      "ai_advantages_exploited": [
+        "multi_perspective_simulation",
+        "consistency_at_scale"
+      ],
+      "super_human_unlocks": [
+        "Evaluate conversation against 5 domain frames simultaneously, emitting calibrated probability scores for each"
+      ],
+      "halt_conditions": [
+        "halt-on-unknown-domain-fallback-auto-detect"
+      ],
+      "context_source": "upgraded",
+      "context_rationale": "research/planning domain expansion per P1 brief SC-8; minimal semantic change requires upgrade classification",
+      "parallel_dispatch_required": true
+    },
+    {
+      "id": "N-FILTER",
+      "type": "FILTER",
+      "exec_type": "inline",
+      "hat": "filter",
+      "tier": "model-medium",
+      "wave": 2,
+      "context_budget_lines": 50,
+      "scale_gates": {
+        "token_budget": 2000,
+        "time_budget": 120,
+        "spawn_budget": 0,
+        "retry_budget": 0
+      },
+      "input_dependencies": [
+        "session_meta"
+      ],
+      "required_output_sections": [
+        "protected_node_set",
+        "avoid_cache_hint",
+        "tiered_node_set_hint"
+      ],
+      "raises_signals": [
+        "protected_node_set",
+        "avoid_cache_hint"
+      ],
+      "ai_advantages_exploited": [
+        "consistency_at_scale",
+        "topology_aware_reasoning"
+      ],
+      "super_human_unlocks": [
+        "Identify always-retain and critical-path nodes across full conversation in one pass; emit tiered_node_set_hint for downstream tier assignment"
+      ],
+      "halt_conditions": [
+        "halt-on-empty-protected-set-advisory"
+      ],
+      "context_source": "upgraded",
+      "context_rationale": "tiered_node_set_hint addition per P1 brief",
+      "parallel_dispatch_required": true
+    },
+    {
+      "id": "N-FILE-CACHE",
+      "type": "IO",
+      "exec_type": "inline",
+      "hat": "cache",
+      "tier": "model-small",
+      "wave": 2,
+      "context_budget_lines": 38,
+      "scale_gates": {
+        "token_budget": 1500,
+        "time_budget": 120,
+        "spawn_budget": 0,
+        "retry_budget": 0
+      },
+      "input_dependencies": [
+        "avoid_cache_hint"
+      ],
+      "required_output_sections": [
+        "file_cache_map"
+      ],
+      "raises_signals": [
+        "file_cache_map"
+      ],
+      "ai_advantages_exploited": [
+        "consistency_at_scale",
+        "super_human_recall"
+      ],
+      "super_human_unlocks": [
+        "SHA-256 delta comparison for all file references in a single pass; substitute FileRef tokens (<20 tokens) for unchanged files to minimize downstream token consumption"
+      ],
+      "halt_conditions": [
+        "halt-advisory-skip-fileref-on-sha-fail"
+      ],
+      "scale_gate_annotation": "mode_inactive=MINIMAL",
+      "context_source": "new",
+      "context_rationale": "New v2 node; delta file cache with SHA-256 comparison per P1 brief \u00a73.2 [DELTA-FILE-CACHE]",
+      "parallel_dispatch_required": true
+    },
+    {
+      "id": "N-SCORER-TECHNICAL",
+      "type": "SCORER",
+      "exec_type": "inline",
+      "hat": "scorer",
+      "tier": "model-medium",
+      "wave": 3,
+      "context_budget_lines": 75,
+      "scale_gates": {
+        "token_budget": 3000,
+        "time_budget": 120,
+        "spawn_budget": 0,
+        "retry_budget": 1
+      },
+      "input_dependencies": [
+        "graph_structure",
+        "domain_gate"
+      ],
+      "required_output_sections": [
+        "technical_scores"
+      ],
+      "raises_signals": [
+        "technical_scores"
+      ],
+      "ai_advantages_exploited": [
+        "consistency_at_scale",
+        "parallel_artifact_processing"
+      ],
+      "super_human_unlocks": [
+        "Apply explicit R(msg) formula with documented weights across all turns simultaneously; rank by technical-debugging relevance in one pass"
+      ],
+      "halt_conditions": [
+        "halt-on-missing-graph-structure"
+      ],
+      "context_source": "upgraded",
+      "context_rationale": "Explicit R(msg) formula weights per P1 brief \u00a71.1; upgrade from ad-hoc v1 weights",
+      "parallel_dispatch_required": true
+    },
+    {
+      "id": "N-SCORER-CREATIVE",
+      "type": "SCORER",
+      "exec_type": "inline",
+      "hat": "scorer",
+      "tier": "model-medium",
+      "wave": 3,
+      "context_budget_lines": 75,
+      "scale_gates": {
+        "token_budget": 3000,
+        "time_budget": 120,
+        "spawn_budget": 0,
+        "retry_budget": 1
+      },
+      "input_dependencies": [
+        "graph_structure",
+        "domain_gate"
+      ],
+      "required_output_sections": [
+        "creative_scores"
+      ],
+      "raises_signals": [
+        "creative_scores"
+      ],
+      "ai_advantages_exploited": [
+        "consistency_at_scale",
+        "parallel_artifact_processing"
+      ],
+      "super_human_unlocks": [
+        "Apply explicit R(msg) formula with documented weights across all turns simultaneously; rank by creative-brainstorming relevance in one pass"
+      ],
+      "halt_conditions": [
+        "halt-on-missing-graph-structure"
+      ],
+      "context_source": "upgraded",
+      "context_rationale": "Explicit R(msg) formula weights per P1 brief \u00a71.1",
+      "parallel_dispatch_required": true
+    },
+    {
+      "id": "N-SEMANTIC-CLUSTER",
+      "type": "ANALYZER",
+      "exec_type": "inline",
+      "hat": "clusterer",
+      "tier": "model-medium",
+      "wave": 3,
+      "context_budget_lines": 75,
+      "scale_gates": {
+        "token_budget": 3000,
+        "time_budget": 120,
+        "spawn_budget": 0,
+        "retry_budget": 1
+      },
+      "input_dependencies": [
+        "dependency_graph",
+        "episode_boundaries"
+      ],
+      "required_output_sections": [
+        "cluster_summaries"
+      ],
+      "raises_signals": [
+        "cluster_summaries"
+      ],
+      "ai_advantages_exploited": [
+        "cross_document_pattern_recognition",
+        "topology_aware_reasoning"
+      ],
+      "super_human_unlocks": [
+        "Episode-level semantic boundary detection and intra-cluster summarization across entire conversation in one pass; optional meta-clustering for sessions >200 turns"
+      ],
+      "halt_conditions": [
+        "halt-advisory-skip-on-minimal-mode"
+      ],
+      "scale_gate_annotation": "mode_inactive=MINIMAL",
+      "context_source": "new",
+      "context_rationale": "New v2 node; episode-level clustering per P1 brief \u00a72.4 [SEMANTIC-CLUSTERING]",
+      "parallel_dispatch_required": true
+    },
+    {
+      "id": "N-ANALYZER-TOPIC-SWITCH",
+      "type": "ANALYZER",
+      "exec_type": "inline",
+      "hat": "analyzer",
+      "tier": "model-medium",
+      "wave": 3,
+      "context_budget_lines": 63,
+      "scale_gates": {
+        "token_budget": 2500,
+        "time_budget": 120,
+        "spawn_budget": 0,
+        "retry_budget": 1
+      },
+      "input_dependencies": [
+        "graph_structure"
+      ],
+      "required_output_sections": [
+        "topic_signal",
+        "episode_boundaries"
+      ],
+      "raises_signals": [
+        "topic_signal",
+        "episode_boundaries"
+      ],
+      "ai_advantages_exploited": [
+        "cross_document_pattern_recognition",
+        "topology_aware_reasoning"
+      ],
+      "super_human_unlocks": [
+        "Detect vocabulary-shift topic boundaries and emit episode_boundaries for semantic clustering; two output ports from single analysis pass"
+      ],
+      "halt_conditions": [
+        "halt-on-missing-graph-structure"
+      ],
+      "context_source": "upgraded",
+      "context_rationale": "episode_boundaries output port addition per P1 brief for N-SEMANTIC-CLUSTER feed",
+      "parallel_dispatch_required": true
+    },
+    {
+      "id": "N-ANALYZER-CORRECTIONS",
+      "type": "ANALYZER",
+      "exec_type": "inline",
+      "hat": "analyzer",
+      "tier": "model-medium",
+      "wave": 3,
+      "context_budget_lines": 50,
+      "scale_gates": {
+        "token_budget": 2000,
+        "time_budget": 120,
+        "spawn_budget": 0,
+        "retry_budget": 1
+      },
+      "input_dependencies": [
+        "graph_structure"
+      ],
+      "required_output_sections": [
+        "supersession_map"
+      ],
+      "raises_signals": [
+        "supersession_map"
+      ],
+      "ai_advantages_exploited": [
+        "cross_document_pattern_recognition",
+        "super_human_recall"
+      ],
+      "super_human_unlocks": [
+        "Track correction-language and mind-change chains across entire conversation; canonicalize latest-instruction-wins supersession map in one pass"
+      ],
+      "halt_conditions": [
+        "halt-on-ap-v7-silent-deferral-detected"
+      ],
+      "context_source": "preserved",
+      "context_rationale": "Byte-identical carry-forward; no brief-mandated changes (DT-01)",
+      "parallel_dispatch_required": true
+    },
+    {
+      "id": "N-AGGREGATION",
+      "type": "AGGREGATION",
+      "exec_type": "spawn",
+      "hat": "aggregator",
+      "tier": "model-large",
+      "wave": 4,
+      "context_budget_lines": 200,
+      "scale_gates": {
+        "token_budget": 8000,
+        "time_budget": 480,
+        "spawn_budget": 1,
+        "retry_budget": 1
+      },
+      "input_dependencies": [
+        "technical_scores",
+        "creative_scores",
+        "cluster_summaries",
+        "topic_signal",
+        "supersession_map",
+        "protected_node_set",
+        "ingest_record",
+        "dependency_graph"
+      ],
+      "required_output_sections": [
+        "pruning_plan"
+      ],
+      "raises_signals": [
+        "pruning_plan"
+      ],
+      "ai_advantages_exploited": [
+        "parallel_artifact_processing",
+        "full_corpus_retention",
+        "topology_aware_reasoning"
+      ],
+      "super_human_unlocks": [
+        "8-stream AND-join with 5-tier priority merge; null-tolerant for 3 streams (technical_scores, creative_scores, cluster_summaries); simultaneous critical-path protection + supersession + topic-thread + cluster-bridge + domain-score fusion"
+      ],
+      "halt_conditions": [
+        "halt-on-and-join-timeout-retry-once",
+        "halt-advisory-partial-aggregation-on-second-timeout"
+      ],
+      "join_policy": "AND",
+      "aggregation_policy": "8-stream null-tolerant AND-join; 5-tier priority merge; branch_budget_cap=8",
+      "context_source": "upgraded",
+      "context_rationale": "6\u21928 stream expansion; dependency_graph and cluster_summaries streams added per P1 brief",
+      "parallel_dispatch_required": false
+    },
+    {
+      "id": "N-REFINER",
+      "type": "REFINER",
+      "exec_type": "spawn",
+      "hat": "refiner",
+      "tier": "model-large",
+      "wave": 5,
+      "context_budget_lines": 200,
+      "scale_gates": {
+        "token_budget": 8000,
+        "time_budget": 480,
+        "spawn_budget": 1,
+        "retry_budget": 1
+      },
+      "input_dependencies": [
+        "pruning_plan",
+        "ingest_record",
+        "file_cache_map",
+        "recovery_overrides"
+      ],
+      "required_output_sections": [
+        "refined_context"
+      ],
+      "raises_signals": [
+        "refined_context"
+      ],
+      "ai_advantages_exploited": [
+        "full_corpus_retention",
+        "consistency_at_scale",
+        "super_human_recall"
+      ],
+      "super_human_unlocks": [
+        "Apply compression annotations and FileRef substitutions across entire corpus in one pass; scope limited to compression recommendations \u2014 eviction handled by N-TIER-MANAGER"
+      ],
+      "halt_conditions": [
+        "halt-on-recovery-override-conflict-annotate-and-continue"
+      ],
+      "join_policy": "AND",
+      "aggregation_policy": "AND-join; concatenate+override-precedence; branch_budget_cap=4",
+      "context_source": "upgraded",
+      "context_rationale": "Scope change: compression-recommendation-only; eviction moved to N-TIER-MANAGER per P1 brief \u00a72.3",
+      "parallel_dispatch_required": false
+    },
+    {
+      "id": "N-VERIFIER",
+      "type": "VERIFIER",
+      "exec_type": "inline",
+      "hat": "verifier",
+      "tier": "model-medium",
+      "wave": 6,
+      "context_budget_lines": 100,
+      "scale_gates": {
+        "token_budget": 4000,
+        "time_budget": 120,
+        "spawn_budget": 0,
+        "retry_budget": 1
+      },
+      "input_dependencies": [
+        "refined_context"
+      ],
+      "required_output_sections": [
+        "verify_pass",
+        "verify_pass_signal",
+        "violation_signal"
+      ],
+      "raises_signals": [
+        "verify_pass_signal",
+        "violation_signal"
+      ],
+      "ai_advantages_exploited": [
+        "consistency_at_scale",
+        "topology_aware_reasoning"
+      ],
+      "super_human_unlocks": [
+        "Run 13-SC safety battery against refined context in one deterministic pass; simultaneous check of pending-tool-call eviction, critical-path integrity, window-size budget, FileRef token size, tier consistency, and 8 additional checks"
+      ],
+      "halt_conditions": [
+        "halt-advisory-proceed-degraded-on-sc9-second-failure"
+      ],
+      "context_source": "upgraded",
+      "context_rationale": "13-SC battery (expanded from 8-SC) per P1 brief \u00a73.4 [VERIFIER-13-SC]",
+      "v16_note": "token_budget=4000 at inline ceiling; justified by 13-SC battery scope",
+      "parallel_dispatch_required": false
+    },
+    {
+      "id": "N-RECOVERY",
+      "type": "RECOVERY",
+      "exec_type": "inline",
+      "hat": "recovery",
+      "tier": "model-medium",
+      "wave": 7,
+      "context_budget_lines": 50,
+      "scale_gates": {
+        "token_budget": 2000,
+        "time_budget": 120,
+        "spawn_budget": 0,
+        "retry_budget": 0
+      },
+      "input_dependencies": [
+        "violation_signal"
+      ],
+      "required_output_sections": [
+        "recovery_overrides",
+        "recovery_pass_signal"
+      ],
+      "raises_signals": [
+        "recovery_overrides",
+        "recovery_pass_signal"
+      ],
+      "ai_advantages_exploited": [
+        "consistency_at_scale",
+        "topology_aware_reasoning"
+      ],
+      "super_human_unlocks": [
+        "Apply per-SC-ID targeted override procedures for all 13 SC classes; emit typed recovery_overrides for N-REFINER re-pass without full pipeline restart"
+      ],
+      "halt_conditions": [
+        "halt-advisory-degraded-mode-on-retry-cap-exceeded"
+      ],
+      "activation": "conditional: E-20 back-edge only",
+      "context_source": "upgraded",
+      "context_rationale": "SC-9..SC-13 override procedures added for new v2 SCs per P1 brief",
+      "parallel_dispatch_required": false
+    },
+    {
+      "id": "N-TIER-MANAGER",
+      "type": "AGGREGATION",
+      "exec_type": "spawn",
+      "hat": "aggregator",
+      "tier": "model-large",
+      "wave": 7,
+      "context_budget_lines": 150,
+      "scale_gates": {
+        "token_budget": 6000,
+        "time_budget": 480,
+        "spawn_budget": 1,
+        "retry_budget": 1
+      },
+      "input_dependencies": [
+        "verify_pass_signal",
+        "recovery_pass_signal",
+        "protected_node_set",
+        "dependency_graph"
+      ],
+      "required_output_sections": [
+        "tier_state",
+        "tier_state_final"
+      ],
+      "raises_signals": [
+        "tier_state",
+        "tier_state_final"
+      ],
+      "ai_advantages_exploited": [
+        "topology_aware_reasoning",
+        "full_corpus_retention",
+        "consistency_at_scale"
+      ],
+      "super_human_unlocks": [
+        "Execute 4-phase Algorithm A eviction (detach completed tool chains \u2192 archive cold turns \u2192 compress warm turns \u2192 emergency-evict by ascending R(msg) score) in one spawn; hot/warm/cold/meta tier assignment across entire corpus"
+      ],
+      "halt_conditions": [
+        "halt-on-algorithm-a-phase4-insufficient-escalate-to-sc13"
+      ],
+      "join_policy": "AND",
+      "aggregation_policy": "4-phase Algorithm A eviction; hot/warm/cold/meta tier assignment; branch_budget_cap=4; MINIMAL: exec_type=inline tier=model-medium",
+      "v16_resolution": "spawn-declared; MINIMAL mode runtime inline downshift is mode-conditional behavior documented in SKILL.md \u00a73 Mode Matrix; graph.json declares exec_type=spawn",
+      "context_source": "new",
+      "context_rationale": "New v2 node; 4-phase Algorithm A eviction with hot/warm/cold/meta tiers per P1 brief \u00a72.3",
+      "parallel_dispatch_required": false
+    },
+    {
+      "id": "N-FORMATTER",
+      "type": "FORMATTER",
+      "exec_type": "inline",
+      "hat": "formatter",
+      "tier": "model-medium",
+      "wave": 8,
+      "context_budget_lines": 150,
+      "scale_gates": {
+        "token_budget": 6000,
+        "time_budget": 120,
+        "spawn_budget": 0,
+        "retry_budget": 1
+      },
+      "input_dependencies": [
+        "protected_node_set",
+        "tier_state",
+        "tier_state_final"
+      ],
+      "required_output_sections": [
+        "formatted_output",
+        "rendered_output",
+        "auto_prune_triggered"
+      ],
+      "raises_signals": [
+        "formatted_output",
+        "rendered_output"
+      ],
+      "ai_advantages_exploited": [
+        "full_corpus_retention",
+        "consistency_at_scale"
+      ],
+      "super_human_unlocks": [
+        "Assemble YAML frontmatter + 5-section body incorporating tier assignments and always-retain exclusions from 6-wave-earlier N-FILTER in one deterministic formatting pass"
+      ],
+      "halt_conditions": [
+        "halt-on-missing-tier-state-final"
+      ],
+      "downshiftable": false,
+      "join_policy": "AND",
+      "aggregation_policy": "AND-join; 3 required inputs; E-17 long-carry from W2 N-FILTER",
+      "context_source": "upgraded",
+      "context_rationale": "Wave resequence W7\u2192W8; AP-4 input contract adds tier_state_final (E-22) per P1 brief \u00a74.1",
+      "parallel_dispatch_required": false
+    },
+    {
+      "id": "N-CONTINUITY-MARKER",
+      "type": "GENERATOR",
+      "exec_type": "inline",
+      "hat": "generator",
+      "tier": "model-medium",
+      "wave": 8,
+      "context_budget_lines": 38,
+      "scale_gates": {
+        "token_budget": 1500,
+        "time_budget": 120,
+        "spawn_budget": 0,
+        "retry_budget": 1
+      },
+      "input_dependencies": [
+        "formatted_output"
+      ],
+      "required_output_sections": [
+        "continuity_output"
+      ],
+      "raises_signals": [
+        "continuity_output"
+      ],
+      "ai_advantages_exploited": [
+        "full_corpus_retention"
+      ],
+      "super_human_unlocks": [
+        "Generate human-readable pruning summary for transparent auto-pruning handoff; injected as first message in pruned context"
+      ],
+      "halt_conditions": [
+        "halt-on-ap-v37-gate-violation-if-auto-prune-false"
+      ],
+      "activation": "conditional: auto_prune_triggered==true via E-23",
+      "context_source": "new",
+      "context_rationale": "New v2 node; generates continuity marker for transparent auto-pruning per P1 brief \u00a75.2",
+      "parallel_dispatch_required": false
+    },
+    {
+      "id": "N-PERSISTER",
+      "type": "PERSISTER",
+      "exec_type": "inline",
+      "hat": "persister",
+      "tier": "no-llm",
+      "wave": 9,
+      "context_budget_lines": 13,
+      "scale_gates": {
+        "token_budget": 500,
+        "time_budget": 30,
+        "spawn_budget": 0,
+        "retry_budget": 1
+      },
+      "input_dependencies": [
+        "continuity_output",
+        "rendered_output"
+      ],
+      "required_output_sections": [
+        "session_artifact"
+      ],
+      "raises_signals": [
+        "session_artifact"
+      ],
+      "ai_advantages_exploited": [
+        "consistency_at_scale"
+      ],
+      "super_human_unlocks": [
+        "Deterministic file write with XOR-join enforcement; exactly one of E-24 or E-24b active per run"
+      ],
+      "halt_conditions": [
+        "halt-on-write-failure-retry-once",
+        "halt-on-null-at-persister-xor-join-violation"
+      ],
+      "v16_resolution": "tier-no-llm-normalized",
+      "context_source": "upgraded",
+      "context_rationale": "Wave resequence W8\u2192W9 due to N-FORMATTER wave change; write contract preserved",
+      "parallel_dispatch_required": false
+    }
+  ],
+  "edges": [
+    {
+      "id": "E-01",
+      "source": "N-INGEST",
+      "target": "N-PREFLIGHT",
+      "edge_type": "required",
+      "signal_field": "ingest_record",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-02",
+      "source": "N-PREFLIGHT",
+      "target": "REFUSE_OUTPUT",
+      "edge_type": "terminal",
+      "signal_field": "refuse_signal",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": "preflight_pass==false"
+    },
+    {
+      "id": "E-02b",
+      "source": "N-TRIGGER-EVAL",
+      "target": "NO-OP-TERMINAL",
+      "edge_type": "forward-conditional",
+      "signal_field": "trigger_noop",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": "mode==auto AND trigger_signal==false"
+    },
+    {
+      "id": "E-03",
+      "source": "N-PREFLIGHT",
+      "target": "N-TRIGGER-EVAL",
+      "edge_type": "gate-open",
+      "signal_field": "session_meta",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": "preflight_pass==true"
+    },
+    {
+      "id": "E-04",
+      "source": "N-TRIGGER-EVAL",
+      "target": "N-CLASSIFIER",
+      "edge_type": "gate-open",
+      "signal_field": "session_meta",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": "trigger_signal==true OR mode==manual"
+    },
+    {
+      "id": "E-05",
+      "source": "N-TRIGGER-EVAL",
+      "target": "N-FILTER",
+      "edge_type": "gate-open",
+      "signal_field": "session_meta",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": "trigger_signal==true OR mode==manual"
+    },
+    {
+      "id": "E-05b",
+      "source": "N-INGEST",
+      "target": "N-AGGREGATION",
+      "edge_type": "required",
+      "signal_field": "ingest_record",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-05c",
+      "source": "N-TRIGGER-EVAL",
+      "target": "N-GENERATOR",
+      "edge_type": "gate-open",
+      "signal_field": "session_meta",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": "trigger_signal==true OR mode==manual"
+    },
+    {
+      "id": "E-06",
+      "source": "N-GENERATOR",
+      "target": "N-SCORER-TECHNICAL",
+      "edge_type": "required",
+      "signal_field": "graph_structure",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-07",
+      "source": "N-GENERATOR",
+      "target": "N-SCORER-CREATIVE",
+      "edge_type": "required",
+      "signal_field": "graph_structure",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-08",
+      "source": "N-GENERATOR",
+      "target": "N-ANALYZER-TOPIC-SWITCH",
+      "edge_type": "required",
+      "signal_field": "graph_structure",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-08b",
+      "source": "N-GENERATOR",
+      "target": "N-ANALYZER-CORRECTIONS",
+      "edge_type": "required",
+      "signal_field": "graph_structure",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-08c",
+      "source": "N-GENERATOR",
+      "target": "N-SEMANTIC-CLUSTER",
+      "edge_type": "optional",
+      "signal_field": "dependency_graph",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": "enable_semantic_clustering==true"
+    },
+    {
+      "id": "E-08d",
+      "source": "N-GENERATOR",
+      "target": "N-AGGREGATION",
+      "edge_type": "required",
+      "signal_field": "dependency_graph",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-09",
+      "source": "N-CLASSIFIER",
+      "target": "N-SCORER-TECHNICAL",
+      "edge_type": "forward-conditional",
+      "signal_field": "domain_gate",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": "domain_label=='technical-debugging' OR domain_probability.technical>=0.4"
+    },
+    {
+      "id": "E-10",
+      "source": "N-CLASSIFIER",
+      "target": "N-SCORER-CREATIVE",
+      "edge_type": "forward-conditional",
+      "signal_field": "domain_gate",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": "domain_label=='creative-brainstorming' OR domain_probability.creative>=0.4"
+    },
+    {
+      "id": "E-11",
+      "source": "N-SCORER-TECHNICAL",
+      "target": "N-AGGREGATION",
+      "edge_type": "required",
+      "signal_field": "technical_scores",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-12",
+      "source": "N-SCORER-CREATIVE",
+      "target": "N-AGGREGATION",
+      "edge_type": "required",
+      "signal_field": "creative_scores",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-13",
+      "source": "N-ANALYZER-TOPIC-SWITCH",
+      "target": "N-AGGREGATION",
+      "edge_type": "required",
+      "signal_field": "topic_signal",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-13b",
+      "source": "N-ANALYZER-TOPIC-SWITCH",
+      "target": "N-SEMANTIC-CLUSTER",
+      "edge_type": "optional",
+      "signal_field": "episode_boundaries",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": "enable_semantic_clustering==true AND mode!=MINIMAL"
+    },
+    {
+      "id": "E-14",
+      "source": "N-ANALYZER-CORRECTIONS",
+      "target": "N-AGGREGATION",
+      "edge_type": "required",
+      "signal_field": "supersession_map",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-14b",
+      "source": "N-SEMANTIC-CLUSTER",
+      "target": "N-AGGREGATION",
+      "edge_type": "required",
+      "signal_field": "cluster_summaries",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-15",
+      "source": "N-FILTER",
+      "target": "N-AGGREGATION",
+      "edge_type": "required",
+      "signal_field": "protected_node_set",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-15b",
+      "source": "N-FILTER",
+      "target": "N-FILE-CACHE",
+      "edge_type": "required",
+      "signal_field": "avoid_cache_hint",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-15c",
+      "source": "N-FILE-CACHE",
+      "target": "N-REFINER",
+      "edge_type": "optional",
+      "signal_field": "file_cache_map",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-16",
+      "source": "N-AGGREGATION",
+      "target": "N-REFINER",
+      "edge_type": "required",
+      "signal_field": "pruning_plan",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-16b",
+      "source": "N-INGEST",
+      "target": "N-REFINER",
+      "edge_type": "required",
+      "signal_field": "ingest_record",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-17",
+      "source": "N-FILTER",
+      "target": "N-FORMATTER",
+      "edge_type": "required",
+      "signal_field": "protected_node_set",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-17b",
+      "source": "N-TIER-MANAGER",
+      "target": "N-FORMATTER",
+      "edge_type": "required",
+      "signal_field": "tier_state",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-18",
+      "source": "N-REFINER",
+      "target": "N-VERIFIER",
+      "edge_type": "required",
+      "signal_field": "refined_context",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-19",
+      "source": "N-VERIFIER",
+      "target": "N-TIER-MANAGER",
+      "edge_type": "gate-open",
+      "signal_field": "verify_pass_signal",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": "verify_pass==true"
+    },
+    {
+      "id": "E-19b",
+      "source": "N-RECOVERY",
+      "target": "N-TIER-MANAGER",
+      "edge_type": "gate-open",
+      "signal_field": "recovery_pass_signal",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": "recovery_complete==true"
+    },
+    {
+      "id": "E-20",
+      "source": "N-VERIFIER",
+      "target": "N-RECOVERY",
+      "edge_type": "back-edge",
+      "signal_field": "violation_signal",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": "verify_pass==false AND retry_count_artifact<1",
+      "cap": 1
+    },
+    {
+      "id": "E-21",
+      "source": "N-RECOVERY",
+      "target": "N-REFINER",
+      "edge_type": "back-edge",
+      "signal_field": "recovery_overrides",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": "E-20 fired",
+      "cap": 1
+    },
+    {
+      "id": "E-22",
+      "source": "N-TIER-MANAGER",
+      "target": "N-FORMATTER",
+      "edge_type": "required",
+      "signal_field": "tier_state_final",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-23",
+      "source": "N-FORMATTER",
+      "target": "N-CONTINUITY-MARKER",
+      "edge_type": "forward-conditional",
+      "signal_field": "formatted_output",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": "auto_prune_triggered==true"
+    },
+    {
+      "id": "E-24",
+      "source": "N-CONTINUITY-MARKER",
+      "target": "N-PERSISTER",
+      "edge_type": "required",
+      "signal_field": "continuity_output",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-24b",
+      "source": "N-FORMATTER",
+      "target": "N-PERSISTER",
+      "edge_type": "required",
+      "signal_field": "rendered_output",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    },
+    {
+      "id": "E-25",
+      "source": "N-PERSISTER",
+      "target": "SKILL_OUTPUT",
+      "edge_type": "terminal",
+      "signal_field": "session_artifact",
+      "scale_gates": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gate_condition": null
+    }
+  ]
+}
